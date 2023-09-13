@@ -22,3 +22,5 @@ delta = 0.0
 delta_char = 0.0
 delta_first = 0.0
 flag = 0
+secret_key = []
+classes = []

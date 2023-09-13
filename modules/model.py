@@ -128,6 +128,6 @@ def get_max_memory_dict():
 
     suggestion = int(round(suggestion / 1000))
     print(f"Auto-assiging --gpu-memory {suggestion} for your GPU to try to prevent out-of-memory errors. You can manually set other values.")
-    max_memory = {0: f'{suggestion}GiB', 'cpu': f'{32}GiB'}
+    max_memory = {0: f'{suggestion}GiB', 'cpu': f'{64}GiB'}
 
     return max_memory if len(max_memory) > 0 else None

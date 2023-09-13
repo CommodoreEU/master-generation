@@ -44,7 +44,8 @@ def load_quantized(model_name):
         'use_safetensors': use_safetensors,
         'trust_remote_code': True,
         'max_memory': get_max_memory_dict(),
-        'quantize_config': quantize_config
+        'quantize_config': quantize_config,
+        'disable_exllama': True
     }
 
     print(f"The AutoGPTQ params are: {params}")

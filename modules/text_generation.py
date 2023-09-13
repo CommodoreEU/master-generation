@@ -15,6 +15,41 @@ from modules.callbacks import (Iteratorize, Stream,
 
 
 import matplotlib.pyplot as plt
+import hashlib
+
+import spacy
+
+# Load the English language model
+nlp = spacy.load("en_core_web_sm")
+
+def secure_hash_to_numbers(input_string, range_list):
+    hashed_bytes = hashlib.sha256(input_string.encode()).digest()
+    
+
+    num_numbers = len(range_list)
+    hashed_integers = [int.from_bytes(hashed_bytes[i:i+4], byteorder='big') for i in range(0, num_numbers * 4, 4)]
+
+    #cast hash to integer, then use modulo to map to required range
+    
+    result_numbers = []
+    for i in range(num_numbers):
+        range_min, range_max = range_list[i]
+        integer = hashed_integers[i]
+        mapped_number = (integer % (range_max - range_min + 1)) + range_min
+        result_numbers.append(mapped_number)
+    
+    return result_numbers
+
+
+def get_last_sentence(text):
+    doc = nlp(text)
+    sentences = [sent.text for sent in doc.sents]
+    if sentences:
+        return sentences[-1]
+    else:
+        return None  # Return None if there are no sentences
+    
+
 
 def get_reply_from_output_ids(output_ids, input_ids, original_question, state, is_chat=False):
     if shared.model_type == 'HF_seq2seq':
@@ -61,6 +96,8 @@ def decode(output_ids, skip_special_tokens=True):
     return shared.tokenizer.decode(output_ids, skip_special_tokens)
 
 
+
+
 def clear_torch_cache():
     gc.collect()
     torch.cuda.empty_cache()
@@ -85,6 +122,8 @@ def calc_greenlist_mask(scores: torch.FloatTensor, greenlist_token_ids) -> torch
 
 def bias_greenlist_logits(scores: torch.Tensor, greenlist_mask: torch.Tensor, greenlist_bias: float) -> torch.Tensor:
         scores[greenlist_mask] = scores[greenlist_mask] + greenlist_bias
+
+        #scores[greenlist_mask] = scores[greenlist_mask] + greenlist_bias[greenlist_mask]
         return scores
 
 
@@ -109,15 +148,22 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[int]:
         if(shared.new_sentence == True):
             shared.new_sentence = False
             shared.flag = True
+
+            #ASCII values 65 to 90 represent uppercase letters (A to Z), and values 97 to 122 represent lowercase letters (a to z)
+            alphabetic_characters = [chr(i) for i in range(65, 91)] #+ [chr(i) for i in range(97, 123)]
+
+            #print(alphabetic_characters[shared.secret_key[1]])
             i = 0
             for word in shared.vocab:
-                if shared.code[shared.acrostic].upper() in shared.vocab_decode[i]:
+                #if shared.code[shared.acrostic].upper() in shared.vocab_decode[i]:
+                if alphabetic_characters[shared.secret_key[1]] in shared.vocab_decode[i]:
                     vocab_permutation[greenlist_size] = word
                     greenlist_size += 1
                 i += 1
         else:
             if (shared.flag):
                 shared.delta = shared.delta_char
+
 
             count = shared.acrostic - 1
             if(count < 0):
@@ -134,7 +180,8 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[int]:
                 #this is for sensorimotor
                 #classes: ['Interoceptive', 'Olfactory', 'Mouth', 'Torso', 'Gustatory', 'Visual', 'Foot_leg', 'Auditory', 'Hand_arm', 'Haptic', 'Head']
                 if shared.vocab_decode[i].upper() in shared.sensorimotor:
-                    if (shared.sensorimotor[shared.vocab_decode[i].upper()] == 'Auditory'):
+                    
+                    if (shared.sensorimotor[shared.vocab_decode[i].upper()][shared.classes[shared.secret_key[0]]] > 2.0):
                         vocab_permutation[greenlist_size] = word
                         greenlist_size += 1
                 i += 1
@@ -277,10 +324,22 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
 
                     reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
 
+                    #detect if sentece ended to start new hash and acrostic for next word
 
-                    if((decode(output[-1],state['skip_special_tokens'])) == "."):
+                    
+                    if((decode(output[-1],state['skip_special_tokens']) == ".")):
+                    #if(decode(output[-1],False) == '</s>'):
                         shared.delta = shared.delta_first
                         shared.new_sentence = True
+
+                        last_sentence = get_last_sentence(reply)
+
+                        
+
+                        shared.secret_key = secure_hash_to_numbers(last_sentence,[(0, 10), (0, 25)])
+
+                        print(last_sentence)
+                        print(chr(ord('A') + shared.secret_key[1]), shared.classes[shared.secret_key[0]] )
 
                         shared.acrostic += 1
                         if (shared.acrostic >= (len(shared.code))):
