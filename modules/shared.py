@@ -1,6 +1,6 @@
 import argparse
 
-
+classifier = None
 model = None
 tokenizer = None
 model_name = "None"
@@ -13,8 +13,10 @@ wbits = 4
 model_dir = 'models'
 model_type = 'llama'
 sensorimotor = None
+stop_everything = False
 
 trust_remote_code = True
+no_use_fast = False
 code = ""
 acrostic = 0
 new_sentence = False

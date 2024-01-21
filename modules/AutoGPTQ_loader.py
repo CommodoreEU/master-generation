@@ -39,7 +39,7 @@ def load_quantized(model_name):
         'model_basename': pt_path.stem,
         'device': "cuda:0",
         'use_triton': False,
-        'inject_fused_attention': True,
+        'inject_fused_attention': False,
         'inject_fused_mlp': False,
         'use_safetensors': use_safetensors,
         'trust_remote_code': True,

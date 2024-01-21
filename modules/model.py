@@ -33,15 +33,24 @@ def find_model_type(model_name):
         return 'HF_generic'
     
 
+def get_model_metadata(model):
+
+
+    model_settings = None
+    return model_settings
+
 def load_model(model_name, gptq = False):
     print(f"Loading {model_name}...")
     t0 = time.time()
 
+    
     shared.model_type = find_model_type(model_name)
     if shared.model_type == 'None':
         print('The path to the model does not exist. Exiting.')
         return None, None
     
+    shared.model_name = model_name
+
     if gptq == True:
         load_func = AutoGPTQ_loader
     else:
@@ -62,7 +71,7 @@ def load_model(model_name, gptq = False):
     print(f"Loaded the model in {(time.time()-t0):.2f} seconds.\n")
     return model, tokenizer
 
-def load_tokenizer(model_name, model):
+def old_load_tokenizer(model_name, model):
     tokenizer = None
 
     if type(model) is transformers.LlamaForCausalLM or "LlamaGPTQForCausalLM" in str(type(model)):
@@ -70,9 +79,10 @@ def load_tokenizer(model_name, model):
         for p in [Path(f"{shared.model_dir}/llama-tokenizer/"), Path(f"{shared.model_dir}/oobabooga_llama-tokenizer/")]:
             if p.exists():
                 print(f"Loading the universal LLaMA tokenizer from {p}...")
-                tokenizer = LlamaTokenizer.from_pretrained(p, clean_up_tokenization_spaces=True)
+                tokenizer = LlamaTokenizer.from_pretrained(p, clean_up_tokenization_spaces=True,legacy=False)
                 return tokenizer
 
+    
         # Otherwise, load it from the model folder and hope that these
         # are not outdated tokenizer files.
         tokenizer = LlamaTokenizer.from_pretrained(Path(f"{shared.model_dir}/{model_name}/"), clean_up_tokenization_spaces=True)
@@ -85,10 +95,21 @@ def load_tokenizer(model_name, model):
     else:
         path_to_model = Path(f"{shared.model_dir}/{model_name}/")
         if path_to_model.exists():
-            tokenizer = AutoTokenizer.from_pretrained(path_to_model, trust_remote_code=shared.args.trust_remote_code)
+            tokenizer = AutoTokenizer.from_pretrained(path_to_model, trust_remote_code=shared.trust_remote_code)
+    tokenizer = None
+    path_to_model = Path(f"{shared.model_dir}/{model_name}/")
 
     return tokenizer
 
+def load_tokenizer(model_name, model):
+    tokenizer = None
+    path_to_model = Path(f"{shared.model_dir}/{model_name}/")
+    tokenizer = LlamaTokenizer.from_pretrained(
+        path_to_model,
+        clean_up_tokenization_spaces=True
+    )
+
+    return tokenizer
 
 def huggingface_loader(model_name):
     if shared.model_type == 'chatglm':
