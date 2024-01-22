@@ -21,6 +21,7 @@ import spacy
 
 # Load the English language model
 nlp = spacy.load("en_core_web_sm")
+start = 0
 
 def secure_hash_to_numbers(input_string, range_list):
 
@@ -251,23 +252,26 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
         #vocab_dict = {value: 0 for value in shared.vocab} 
 
         if(shared.new_sentence == True):
-            print("//////////// New Sentence, generate acrosticon NOW")
+            
+            if(shared.start == 1):
+                shared.new_sentence = False
             shared.new_sentence = False
+            shared.start += 1
 
             #ASCII values 65 to 90 represent uppercase letters (A to Z), and values 97 to 122 represent lowercase letters (a to z)
             alphabetic_characters = [chr(i) for i in range(65, 91)] #+ [chr(i) for i in range(97, 123)]
 
-            print(f'''//////////// {alphabetic_characters[shared.secret_key[1]]}''')
+            #print(f'''//////////// {alphabetic_characters[shared.secret_key[1]]}''')
             i = 0
             for word in shared.vocab:
-                if alphabetic_characters[shared.secret_key[1]] in shared.vocab_decode[i]:
+                #if alphabetic_characters[shared.secret_key[1]] in shared.vocab_decode[i]:
+                if shared.vocab_decode[i].startswith(alphabetic_characters[shared.secret_key[1]]):
 
                     vocab_permutation[greenlist_size] = word
 
                     vocab_permutation2[i] = shared.delta_first
                     greenlist_size += 1
                 i += 1
-            print(f'''/////////// found words: {greenlist_size}''')
         else:
             i = 0
             for word in shared.vocab:
@@ -310,7 +314,7 @@ def boost_tokens_with_a(input_ids, scores, **kwargs):
 #max_new_tokens, do_sample, temperature, top_p, typical_p, repetition_penalty, encoder_repetition_penalty, top_k, min_length, no_repeat_ngram_size, num_beams, penalty_alpha, length_penalty, early_stopping, seed, 
 def generate_reply(question, state, eos_token=None, stopping_strings=None):
     clear_torch_cache()
-
+    done = False
     seed = set_manual_seed(state['seed'])
     generate_params = {}
     
@@ -329,7 +333,7 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
     # Encode the input
     input_ids = encode(question, add_bos_token=state['add_bos_token'], truncation_length=get_max_prompt_length(state))
     original_input_ids = input_ids
-    output = input_ids[0]
+    #output = input_ids[0]
 
     # Find the eos tokens
     eos_token_ids = [shared.tokenizer.eos_token_id] if shared.tokenizer.eos_token_id is not None else []
@@ -362,6 +366,8 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
     generate_params['eos_token_id'] = eos_token_ids
     generate_params['stopping_criteria'] = stopping_criteria_list
 
+  
+   
     reply = ""
     t0 = time.time()
     try:
@@ -394,23 +400,23 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
 
                     reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
 
+                 
+                        
                     #detect if sentece ended to start new hash and acrostic for next word
                     if((decode(output[-1],state['skip_special_tokens']) == ("." or "!"or "?"))):
-                        shared.new_sentence = True
-
-                        last_sentence = get_last_sentence(reply)
-                        
-
-                        print("------------------found end of sentence, last sentence is:")
-                        print(last_sentence)
-    
-                        shared.secret_key = secure_hash_to_numbers(last_sentence,[(0, 10), (0, 25)])
-
+                        #shared.new_sentence = True
+                        #last_sentence = get_last_sentence(reply)
+                        #print("------------------found end of sentence, last sentence is:")
+                        #print(last_sentence)
+                        #shared.secret_key = secure_hash_to_numbers(last_sentence,[(0, 10), (0, 25)])
+                        break
                     
                     if output[-1] in eos_token_ids:
+                        done = True
                         break
 
     except Exception:
+        done = True
         traceback.print_exc()
 
     finally:  
@@ -434,5 +440,6 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
         original_tokens = len(original_input_ids[0])
         new_tokens = len(output) - original_tokens
         print(f'Output generated in {(t1-t0):.2f} seconds ({new_tokens/(t1-t0):.2f} tokens/s, {new_tokens} tokens, context {original_tokens}, seed {seed})')
-        return reply
+        cleaned_string = reply.replace("\n", "").rstrip()
+        return cleaned_string, done
 

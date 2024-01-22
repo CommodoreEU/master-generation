@@ -20,6 +20,7 @@ no_use_fast = False
 code = ""
 acrostic = 0
 new_sentence = False
+start = 0
 delta = 0.0
 delta_char = 0.0
 delta_first = 0.0
