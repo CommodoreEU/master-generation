@@ -253,6 +253,9 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
 
         if(shared.new_sentence == True):
             
+            #to avoid influence first sentence
+            shared.delta_senso = shared.delta_char
+
             if(shared.start == 1):
                 shared.new_sentence = False
             shared.new_sentence = False
@@ -280,7 +283,7 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
                     if (shared.sensorimotor[shared.vocab_decode[i].upper()][shared.classes[shared.secret_key[0]]] > 2.0):
                         vocab_permutation[greenlist_size] = word
 
-                        vocab_permutation2[i] = shared.delta_char
+                        vocab_permutation2[i] = shared.delta_senso
                         greenlist_size += 1
 
                     

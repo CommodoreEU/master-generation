@@ -23,6 +23,7 @@ new_sentence = False
 start = 0
 delta = 0.0
 delta_char = 0.0
+delta_senso = 0.0
 delta_first = 0.0
 flag = 0
 secret_key = []
