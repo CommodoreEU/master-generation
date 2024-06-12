@@ -102,12 +102,25 @@ def old_load_tokenizer(model_name, model):
     return tokenizer
 
 def load_tokenizer(model_name, model):
+    # tokenizer = None
+    # path_to_model = Path(f"{shared.model_dir}/{model_name}/")
+    # tokenizer = LlamaTokenizer.from_pretrained(
+    #     path_to_model,
+    #     clean_up_tokenization_spaces=True
+    # )
+
+    # return tokenizer
     tokenizer = None
     path_to_model = Path(f"{shared.model_dir}/{model_name}/")
-    tokenizer = LlamaTokenizer.from_pretrained(
-        path_to_model,
-        clean_up_tokenization_spaces=True
-    )
+    if path_to_model.exists():
+        if shared.no_use_fast:
+            print('Loading the tokenizer with use_fast=False.')
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            path_to_model,
+            trust_remote_code=shared.trust_remote_code,
+            use_fast=not shared.no_use_fast
+        )
 
     return tokenizer
 
@@ -136,7 +149,7 @@ def GPTQ_loader(model_name):
 def AutoGPTQ_loader(model_name):
     import modules.AutoGPTQ_loader
 
-    return modules.AutoGPTQ_loader.load_quantized(model_name)
+    return modules.AutoGPTQ_loader.load_quantized(model_name,)
 
 
 def get_max_memory_dict():

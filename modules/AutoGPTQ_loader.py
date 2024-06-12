@@ -45,7 +45,8 @@ def load_quantized(model_name):
         'trust_remote_code': True,
         'max_memory': get_max_memory_dict(),
         'quantize_config': quantize_config,
-        'disable_exllama': True
+        'disable_exllama': True,
+        'use_marlin': False
     }
 
     print(f"The AutoGPTQ params are: {params}")
