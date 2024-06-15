@@ -39,7 +39,7 @@ def get_model_metadata(model):
     model_settings = None
     return model_settings
 
-def load_model(model_name, gptq = False):
+def load_model(model_name, gptq = False, awq = False):
     print(f"Loading {model_name}...")
     t0 = time.time()
 
@@ -53,6 +53,8 @@ def load_model(model_name, gptq = False):
 
     if gptq == True:
         load_func = AutoGPTQ_loader
+    elif awq == True:
+        load_func = AutoAWQ_loader
     else:
         load_func = huggingface_loader
 
@@ -102,25 +104,12 @@ def old_load_tokenizer(model_name, model):
     return tokenizer
 
 def load_tokenizer(model_name, model):
-    # tokenizer = None
-    # path_to_model = Path(f"{shared.model_dir}/{model_name}/")
-    # tokenizer = LlamaTokenizer.from_pretrained(
-    #     path_to_model,
-    #     clean_up_tokenization_spaces=True
-    # )
-
-    # return tokenizer
     tokenizer = None
     path_to_model = Path(f"{shared.model_dir}/{model_name}/")
-    if path_to_model.exists():
-        if shared.no_use_fast:
-            print('Loading the tokenizer with use_fast=False.')
-
-        tokenizer = AutoTokenizer.from_pretrained(
-            path_to_model,
-            trust_remote_code=shared.trust_remote_code,
-            use_fast=not shared.no_use_fast
-        )
+    tokenizer = LlamaTokenizer.from_pretrained(
+        path_to_model,
+        clean_up_tokenization_spaces=True
+    )
 
     return tokenizer
 
@@ -133,8 +122,11 @@ def huggingface_loader(model_name):
         LoaderClass = AutoModelForCausalLM
 
     # Load the model in simple 16-bit mode by default
-    model = LoaderClass.from_pretrained(Path(f"{shared.model_dir}/{model_name}"), low_cpu_mem_usage=True, torch_dtype=torch.float16, trust_remote_code=shared.trust_remote_code)
+    model = LoaderClass.from_pretrained(Path(f"{shared.model_dir}/{model_name}"), low_cpu_mem_usage=True, torch_dtype=torch.float16, trust_remote_code=shared.trust_remote_code,device_map="auto" )
     
+
+     # Optionally clear the cache if still encountering memory issues
+    torch.cuda.empty_cache()
     model = model.cuda()
   
     return model
@@ -150,6 +142,23 @@ def AutoGPTQ_loader(model_name):
     import modules.AutoGPTQ_loader
 
     return modules.AutoGPTQ_loader.load_quantized(model_name,)
+
+def AutoAWQ_loader(model_name):
+    from awq import AutoAWQForCausalLM
+
+    model_dir = Path(f'{shared.model_dir}/{model_name}')
+
+    model = AutoAWQForCausalLM.from_quantized(
+                quant_path=model_dir,
+                max_new_tokens=512,#shared.max_seq_len
+                trust_remote_code=shared.trust_remote_code,
+                fuse_layers=True,#not shared.no_inject_fused_attention
+                max_memory=get_max_memory_dict(),
+                batch_size=1,
+                safetensors=any(model_dir.glob('*.safetensors')),
+            )
+
+    return model
 
 
 def get_max_memory_dict():

@@ -171,7 +171,12 @@ def get_reply_from_output_ids(output_ids, input_ids, original_question, state, i
         reply = decode(output_ids, state['skip_special_tokens'])
     else:
         new_tokens = len(output_ids) - len(input_ids[0])
+
+        
+
         reply = decode(output_ids[-new_tokens:], state['skip_special_tokens'])
+
+        print(reply)
 
         # Prevent LlamaTokenizer from skipping a space
         if type(shared.tokenizer) is transformers.LlamaTokenizer and len(output_ids) > 0:
@@ -194,11 +199,23 @@ def encode(prompt, add_special_tokens=True, add_bos_token=True, truncation_lengt
     # This is a hack for making replies more creative.
     if not add_bos_token and input_ids[0][0] == shared.tokenizer.bos_token_id:
         input_ids = input_ids[:, 1:]
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////#/////////////////////////////////////////////////////////////////////////
+    #/////////////////////////////////////////////////////////////////////////
 
     # Llama adds this extra token when the first character is '\n', and this
     # compromises the stopping criteria, so we just remove it
     if type(shared.tokenizer) is transformers.LlamaTokenizer and input_ids[0][0] == 29871:
         input_ids = input_ids[:, 1:]
+
+    #///////////////////////////////////////////////////////////////////////// i commented this out for testng llama 3, dont forget
 
     # Handling truncation
     if truncation_length is not None:
@@ -264,17 +281,19 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
             #ASCII values 65 to 90 represent uppercase letters (A to Z), and values 97 to 122 represent lowercase letters (a to z)
             alphabetic_characters = [chr(i) for i in range(65, 91)] #+ [chr(i) for i in range(97, 123)]
 
-            #print(f'''//////////// {alphabetic_characters[shared.secret_key[1]]}''')
+            print(f'''//////////// {alphabetic_characters[shared.secret_key[1]]}''')
             i = 0
             for word in shared.vocab:
                 #if alphabetic_characters[shared.secret_key[1]] in shared.vocab_decode[i]:
                 if shared.vocab_decode[i].startswith(alphabetic_characters[shared.secret_key[1]]):
 
+                    
                     vocab_permutation[greenlist_size] = word
 
                     vocab_permutation2[i] = shared.delta_first
                     greenlist_size += 1
                 i += 1
+            #print(f'''acro size {greenlist_size}''')
         else:
             i = 0
             for word in shared.vocab:
@@ -288,7 +307,7 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
 
                     
                 i += 1
-
+            #print(f'''senso size {greenlist_size}''')
             
         greenlist_ids = vocab_permutation[:greenlist_size] # new
 
@@ -392,7 +411,7 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
 
                 
                 with torch.no_grad():
-                    shared.model.generate(**kwargs)
+                    shared.model.generate(**kwargs, pad_token_id=shared.tokenizer.eos_token_id)
 
             def generate_with_streaming(**kwargs):
                 
@@ -402,8 +421,6 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
                 for output in generator:
 
                     reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
-
-                 
                         
                     #detect if sentece ended to start new hash and acrostic for next word
                     if((decode(output[-1],state['skip_special_tokens']) == ("." or "!"or "?"))):

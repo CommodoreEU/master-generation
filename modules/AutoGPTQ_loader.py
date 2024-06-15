@@ -29,7 +29,7 @@ def load_quantized(model_name):
         quantize_config = BaseQuantizeConfig(
             bits=bits if (bits := shared.wbits) > 0 else 4,
             group_size=gs if (gs := shared.groupsize) > 0 else -1,
-            desc_act=True
+            desc_act = shared.act_order#True
         )
     else:
         quantize_config = None
@@ -44,9 +44,9 @@ def load_quantized(model_name):
         'use_safetensors': use_safetensors,
         'trust_remote_code': True,
         'max_memory': get_max_memory_dict(),
-        'quantize_config': quantize_config,
-        'disable_exllama': True,
-        'use_marlin': False
+        'quantize_config': quantize_config
+        #'disable_exllama': True
+        #'use_marlin': False
     }
 
     print(f"The AutoGPTQ params are: {params}")

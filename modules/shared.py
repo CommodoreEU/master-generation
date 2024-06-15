@@ -7,6 +7,7 @@ model_name = "None"
 delta = None
 vocab = None
 vocab_decode = None
+act_order = True
 
 groupsize = 128
 wbits = 4
