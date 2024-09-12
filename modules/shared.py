@@ -15,6 +15,11 @@ model_dir = 'models'
 model_type = 'llama'
 sensorimotor = None
 stop_everything = False
+is_seq2seq = False
+use_flash_attention_2 = False
+no_use_fast = False
+use_eager_attention = False
+stop_everything = False
 
 trust_remote_code = True
 no_use_fast = False

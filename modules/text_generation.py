@@ -10,8 +10,7 @@ import torch
 import transformers
 
 import modules.shared as shared
-from modules.callbacks import (Iteratorize, Stream,
-                               _SentinelTokenStoppingCriteria)
+from modules.callbacks import (Iteratorize, Stream,_StopEverythingStoppingCriteria)
 
 
 import matplotlib.pyplot as plt
@@ -166,26 +165,36 @@ def apply_stopping_strings(reply, all_stop_strings):
 
     return reply, stop_found
 
-def get_reply_from_output_ids(output_ids, input_ids, original_question, state, is_chat=False):
-    if shared.model_type == 'HF_seq2seq':
-        reply = decode(output_ids, state['skip_special_tokens'])
-    else:
-        new_tokens = len(output_ids) - len(input_ids[0])
+def get_reply_from_output_ids(output_ids, state=None, starting_from=0):
+    # if shared.model_type == 'HF_seq2seq':
+    #     reply = decode(output_ids, state['skip_special_tokens'])
+    # else:
+    #     new_tokens = len(output_ids) - len(input_ids[0])
 
         
 
-        reply = decode(output_ids[-new_tokens:], state['skip_special_tokens'])
+    #     reply = decode(output_ids[-new_tokens:], state['skip_special_tokens'])
 
-        print(reply)
+    #     print(reply)
 
         # Prevent LlamaTokenizer from skipping a space
-        if type(shared.tokenizer) is transformers.LlamaTokenizer and len(output_ids) > 0:
-            if shared.tokenizer.convert_ids_to_tokens(int(output_ids[-new_tokens])).startswith('▁'):
-                reply = ' ' + reply
+        # if type(shared.tokenizer) is transformers.LlamaTokenizer and len(output_ids) > 0:
+        #     if shared.tokenizer.convert_ids_to_tokens(int(output_ids[-new_tokens])).startswith('▁'):
+        #         reply = ' ' + reply
 
-    #if not is_chat:
-    #    reply = apply_extensions('output', reply)
 
+    reply = decode(output_ids[starting_from:], state['skip_special_tokens'] if state else True)
+
+    # Handle tokenizers that do not add the leading space for the first token
+    if (hasattr(shared.tokenizer, 'convert_ids_to_tokens') and len(output_ids) > starting_from) and not reply.startswith(' '):
+        first_token = shared.tokenizer.convert_ids_to_tokens(int(output_ids[starting_from]))
+        if isinstance(first_token, (bytes,)):
+            first_token = first_token.decode('utf8')
+
+        if first_token.startswith('▁'):
+            reply = ' ' + reply
+
+    #print(reply)
     return reply
 
 def get_max_prompt_length(state):
@@ -194,26 +203,33 @@ def get_max_prompt_length(state):
 
 def encode(prompt, add_special_tokens=True, add_bos_token=True, truncation_length=None):
     
-    input_ids = shared.tokenizer.encode(str(prompt), return_tensors='pt', add_special_tokens=add_special_tokens)
+    input_ids = shared.tokenizer.encode(str(prompt), return_tensors='pt', add_special_tokens=True)
+
+    if hasattr(shared.tokenizer, 'bos_token_id') and shared.tokenizer.bos_token_id is not None:
+        if add_bos_token:
+            if (len(input_ids[0]) > 0 and input_ids[0][0] != shared.tokenizer.bos_token_id) or len(input_ids[0]) == 0:
+                # Add a missing bos token (it may not have been added due to faulty model metadata)
+                bos_tensor = torch.tensor([[shared.tokenizer.bos_token_id]])
+                input_ids = torch.cat((bos_tensor, input_ids), 1)
+
+            # Prevent double bos token due to jinja templates with <s> somewhere
+            while len(input_ids[0]) > 1 and input_ids[0][0] == shared.tokenizer.bos_token_id and input_ids[0][1] == shared.tokenizer.bos_token_id:
+                input_ids = input_ids[:, 1:]
+        else:
+            # Remove any bos token that may have been added
+            while len(input_ids[0]) > 0 and input_ids[0][0] == shared.tokenizer.bos_token_id:
+                input_ids = input_ids[:, 1:]
 
     # This is a hack for making replies more creative.
-    if not add_bos_token and input_ids[0][0] == shared.tokenizer.bos_token_id:
-        input_ids = input_ids[:, 1:]
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////#/////////////////////////////////////////////////////////////////////////
-    #/////////////////////////////////////////////////////////////////////////
+    #if not add_bos_token and input_ids[0][0] == shared.tokenizer.bos_token_id:
+    #    input_ids = input_ids[:, 1:]
+    
+
 
     # Llama adds this extra token when the first character is '\n', and this
     # compromises the stopping criteria, so we just remove it
-    if type(shared.tokenizer) is transformers.LlamaTokenizer and input_ids[0][0] == 29871:
-        input_ids = input_ids[:, 1:]
+    #if type(shared.tokenizer) is transformers.LlamaTokenizer and input_ids[0][0] == 29871:
+    #    input_ids = input_ids[:, 1:]
 
     #///////////////////////////////////////////////////////////////////////// i commented this out for testng llama 3, dont forget
 
@@ -225,7 +241,7 @@ def encode(prompt, add_special_tokens=True, add_bos_token=True, truncation_lengt
 
 
 def decode(output_ids, skip_special_tokens=False):
-    return shared.tokenizer.decode(output_ids, skip_special_tokens=skip_special_tokens)
+    return shared.tokenizer.decode(output_ids, skip_special_tokens=skip_special_tokens,clean_up_tokenization_spaces=False)
 
 
 
@@ -268,6 +284,21 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
         vocab_permutation2 = [0] * len(shared.vocab) #[(n, 0) for n in range(len(shared.vocab))]
         #vocab_dict = {value: 0 for value in shared.vocab} 
 
+        # Check if input contains special characters
+        # special_tokens = [
+        #     shared.tokenizer.pad_token_id,  # Padding token
+        #     shared.tokenizer.eos_token_id,  # End-of-sequence token
+        #     shared.tokenizer.bos_token_id   # Start-of-sequence token
+        # ]
+        # Decode input tokens to check if special characters are present
+        #TODO: is this really required? this is supposed to not change any logits if current token is special on
+        #for token_id in input_ids:
+        #    decoded_token = shared.tokenizer.decode([token_id], skip_special_tokens=False,clean_up_tokenization_spaces=False)
+        #    # If it's a special token, skip the function and return an empty list
+        #    if token_id in special_tokens or decoded_token in ['▁', 'Ġ']:  # Add more as needed
+        #        return [0] * len(shared.vocab)  # Return empty or default vocab_permutation2
+
+
         if(shared.new_sentence == True):
             
             #to avoid influence first sentence
@@ -284,16 +315,20 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
             print(f'''//////////// {alphabetic_characters[shared.secret_key[1]]}''')
             i = 0
             for word in shared.vocab:
-                #if alphabetic_characters[shared.secret_key[1]] in shared.vocab_decode[i]:
-                if shared.vocab_decode[i].startswith(alphabetic_characters[shared.secret_key[1]]):
+                # decoded_token = shared.vocab_decode[i]
+                # if decoded_token.startswith('▁') or decoded_token.startswith('Ġ'):
+                #     decoded_token = decoded_token[1:]
 
-                    
+                
+                # if shared.vocab_decode[i].startswith(alphabetic_characters[shared.secret_key[1]]):
+                #the new sentence should have a whitespace as first token....
+                if shared.vocab_decode[i].startswith(f' {alphabetic_characters[shared.secret_key[1]]}'):                    
                     vocab_permutation[greenlist_size] = word
-
                     vocab_permutation2[i] = shared.delta_first
                     greenlist_size += 1
                 i += 1
-            #print(f'''acro size {greenlist_size}''')
+                
+            print(f'''acro size {greenlist_size}''')
         else:
             i = 0
             for word in shared.vocab:
@@ -307,7 +342,6 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
 
                     
                 i += 1
-            #print(f'''senso size {greenlist_size}''')
             
         greenlist_ids = vocab_permutation[:greenlist_size] # new
 
@@ -317,20 +351,40 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
 
 def boost_tokens_with_a(input_ids, scores, **kwargs):
    
-    batched_greenlist_ids = [None for _ in range(input_ids.shape[0])]
+    # batched_greenlist_ids = [None for _ in range(input_ids.shape[0])]
 
-    for b_idx in range(input_ids.shape[0]):
-            #greenlist_ids = get_greenlist_ids(input_ids[b_idx])
-
-            greenlist_ids = get_greenlist_ids(input_ids[b_idx])
-            batched_greenlist_ids[b_idx] = greenlist_ids
+    # for b_idx in range(input_ids.shape[0]):
+    #         #greenlist_ids = get_greenlist_ids(input_ids[b_idx])
 
 
+    #         greenlist_ids = get_greenlist_ids(input_ids[b_idx])
+    #         batched_greenlist_ids[b_idx] = greenlist_ids
 
-    permutation_tensor = torch.as_tensor(batched_greenlist_ids)
-    permutation_tensor = permutation_tensor.to("cuda:0")
+
+
+    # permutation_tensor = torch.as_tensor(batched_greenlist_ids)
+    # permutation_tensor = permutation_tensor.to("cuda:0")
+
+    # print(input_ids.shape)
+    # scores[:] = scores[:] + permutation_tensor[:] 
+    # return scores
+        # Initialize all batched_greenlist_ids with [0] * len(shared.vocab)
+    vocab_size = len(shared.vocab)
+    batched_greenlist_ids = [[0] * vocab_size for _ in range(input_ids.shape[0])]
+
+    # Only calculate get_greenlist_ids for the latest b_idx (the last one)
+    latest_b_idx = input_ids.shape[0] - 1
+    greenlist_ids = get_greenlist_ids(input_ids[latest_b_idx])
     
-    scores[:] = scores[:] + permutation_tensor[:] 
+    # Set the last batch greenlist
+    batched_greenlist_ids[latest_b_idx] = greenlist_ids
+
+    # Convert batched_greenlist_ids to a tensor and move to GPU
+    permutation_tensor = torch.as_tensor(batched_greenlist_ids).to("cuda:0")
+
+    # Add the permutation tensor to the scores
+    scores[:] = scores[:] + permutation_tensor[:]
+
     return scores
 
 #max_new_tokens, do_sample, temperature, top_p, typical_p, repetition_penalty, encoder_repetition_penalty, top_k, min_length, no_repeat_ngram_size, num_beams, penalty_alpha, length_penalty, early_stopping, seed, 
@@ -340,27 +394,28 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
     seed = set_manual_seed(state['seed'])
     generate_params = {}
     
-
     original_question = question
-    #print(f"\n\n{question}\n--------------------")
 
 
-
-    for k in ['max_new_tokens', 'do_sample', 'temperature', 'top_p', 'typical_p', 'repetition_penalty', 'encoder_repetition_penalty', 'top_k', 'min_length', 'no_repeat_ngram_size', 'num_beams', 'penalty_alpha', 'length_penalty', 'early_stopping']:
-        generate_params[k] = state[k]
+    for k in ['max_new_tokens', 'temperature', 'temperature_last', 'dynamic_temperature', 'dynatemp_low', 'dynatemp_high', 'dynatemp_exponent', 'smoothing_factor', 'smoothing_curve', 'top_p', 'min_p', 'top_k', 'repetition_penalty', 'presence_penalty', 'frequency_penalty', 'repetition_penalty_range', 'typical_p', 'tfs', 'top_a', 'guidance_scale', 'penalty_alpha', 'mirostat_mode', 'mirostat_tau', 'mirostat_eta', 'do_sample', 'encoder_repetition_penalty', 'no_repeat_ngram_size', 'dry_multiplier', 'dry_base', 'dry_allowed_length', 'dry_sequence_breakers']:
+        if k in state:
+            generate_params[k] = state[k]
 
     if state['ban_eos_token']:
         generate_params['suppress_tokens'] = [shared.tokenizer.eos_token_id]
 
     # Encode the input
     input_ids = encode(question, add_bos_token=state['add_bos_token'], truncation_length=get_max_prompt_length(state))
+    
     original_input_ids = input_ids
     #output = input_ids[0]
 
     # Find the eos tokens
+    #eos_token_ids = [shared.tokenizer.eos_token_id] if shared.tokenizer.eos_token_id is not None else []
+    #if eos_token is not None:
+    #    eos_token_ids.append(int(encode(eos_token)[0][-1]))
     eos_token_ids = [shared.tokenizer.eos_token_id] if shared.tokenizer.eos_token_id is not None else []
-    if eos_token is not None:
-        eos_token_ids.append(int(encode(eos_token)[0][-1]))
+    generate_params['eos_token_id'] = eos_token_ids
 
     # Add the encoded tokens to generate_params
     original_input_ids = input_ids
@@ -368,25 +423,31 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
 
 
     # Create the StoppingCriteriaList with the stopping strings (needs to be done after tokenizer extensions)
-    stopping_criteria_list = transformers.StoppingCriteriaList()
-    for st in (stopping_strings, ast.literal_eval(f"[{state['custom_stopping_strings']}]")):
-        if type(st) is list and len(st) > 0:
-            sentinel_token_ids = [encode(string, add_special_tokens=False) for string in st]
-            stopping_criteria_list.append(_SentinelTokenStoppingCriteria(sentinel_token_ids=sentinel_token_ids, starting_idx=len(input_ids[0])))
-            break
+    # stopping_criteria_list = transformers.StoppingCriteriaList()
 
-
+    # for st in (stopping_strings, ast.literal_eval(f"[{state['custom_stopping_strings']}]")):
+    #     if type(st) is list and len(st) > 0:
+    #         sentinel_token_ids = [encode(string, add_special_tokens=False) for string in st]
+    #         stopping_criteria_list.append(_SentinelTokenStoppingCriteria(sentinel_token_ids=sentinel_token_ids, starting_idx=len(input_ids[0])))
+    #         break
+    generate_params['stopping_criteria'] = transformers.StoppingCriteriaList()
+    generate_params['stopping_criteria'].append(_StopEverythingStoppingCriteria())
+    
     ##logits code
     generate_params.update({"logits_processor": transformers.LogitsProcessorList([boost_tokens_with_a])})
-    shared.vocab=list(shared.tokenizer.get_vocab().values())
+
+    #this does not work anymore since rust tokenizer implementations do not order their vocab by token id, fix is to instead create a range() of length of vocab
+    #shared.vocab=list(shared.tokenizer.get_vocab().values())
+    shared.vocab = list(range(len(shared.tokenizer.get_vocab())))
+    
     shared.vocab_decode = []
     for word in shared.vocab:
-         shared.vocab_decode.append(shared.tokenizer.decode(word,state['skip_special_tokens']))
-
-
-    # Update generate_params with the eos token and the stopping strings
-    generate_params['eos_token_id'] = eos_token_ids
-    generate_params['stopping_criteria'] = stopping_criteria_list
+        decoded_token = shared.tokenizer.decode(word, skip_special_tokens=False,clean_up_tokenization_spaces=False)
+        #better do this inside the logits function
+        #  if decoded_token.startswith('▁') or decoded_token.startswith('Ġ'):
+        #             decoded_token = decoded_token[1:]
+                    
+        shared.vocab_decode.append(decoded_token)#,state['skip_special_tokens']))
 
   
    
@@ -400,40 +461,50 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
                 output = shared.model.generate(**generate_params)[0]
                 output = output.cuda()
 
-            reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
+            #reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
+            starting_from = 0 if shared.is_seq2seq else len(input_ids[0])
+            reply = get_reply_from_output_ids(output, state, starting_from=starting_from)
 
         # Stream the reply 1 token at a time.
         # This is based on the trick of using 'stopping_criteria' to create an iterator.
         else:
-            def generate_with_callback(callback=None, **kwargs):
+            def generate_with_callback(callback=None, *args, **kwargs):
                 kwargs['stopping_criteria'].append(Stream(callback_func=callback))
                 clear_torch_cache()
-
-                
                 with torch.no_grad():
-                    shared.model.generate(**kwargs, pad_token_id=shared.tokenizer.eos_token_id)
+                    shared.model.generate(**kwargs, pad_token_id=shared.tokenizer.pad_token_id)
 
             def generate_with_streaming(**kwargs):
-                
-                return Iteratorize(generate_with_callback, kwargs, callback=None)
+                return Iteratorize(generate_with_callback, [], kwargs, callback=None)
 
             with generate_with_streaming(**generate_params) as generator:
+                cumulative_reply = ''#is reply in our case
+                starting_from = 0 if shared.is_seq2seq else len(input_ids[0])
                 for output in generator:
-
-                    reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
-                        
-                    #detect if sentece ended to start new hash and acrostic for next word
-                    if((decode(output[-1],state['skip_special_tokens']) == ("." or "!"or "?"))):
-                        #shared.new_sentence = True
-                        #last_sentence = get_last_sentence(reply)
-                        #print("------------------found end of sentence, last sentence is:")
-                        #print(last_sentence)
-                        #shared.secret_key = secure_hash_to_numbers(last_sentence,[(0, 10), (0, 25)])
-                        break
-                    
+                    #print((decode(output[-1],state['skip_special_tokens'])))
                     if output[-1] in eos_token_ids:
                         done = True
                         break
+                    #reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
+                    new_content = get_reply_from_output_ids(output, state, starting_from=starting_from)
+                        
+                    #detect if sentece ended to start new hash and acrostic for next word
+                    if((decode(output[-1],state['skip_special_tokens']) == ("." or "!"or "?"))):
+                        shared.new_sentence = True
+                        last_sentence = get_last_sentence(reply)
+                        print("------------------found end of sentence, last sentence is:")
+                        print(last_sentence)
+                        shared.secret_key = secure_hash_to_numbers(last_sentence,[(0, 10), (0, 25)])
+                        print(shared.secret_key)
+                        #break change this if you want to do semantic labels again
+
+                    if chr(0xfffd) in new_content:
+                        continue
+
+                    reply += new_content
+                    starting_from = len(output)
+                    
+                    
 
     except Exception:
         done = True
@@ -461,5 +532,5 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
         new_tokens = len(output) - original_tokens
         #print(f'Output generated in {(t1-t0):.2f} seconds ({new_tokens/(t1-t0):.2f} tokens/s, {new_tokens} tokens, context {original_tokens}, seed {seed})')
         cleaned_string = reply.replace("\n", "").rstrip()
-        return cleaned_string, done
+        return reply, done
 

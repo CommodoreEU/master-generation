@@ -1,2 +1,23 @@
-What is the capital of France?,The capital of France is Paris.,"The capital of France is Paris. The people living in Paris are called Parisians. You can visit the Eiffel tower, walk in the park or go to a museum. Do you want me to continue with other capitals? Would you like me to help you with something else?"
-Explain the process of photosynthesis.,Photosynthesis is a process that converts carbon dioxide and water into sugar and oxygen.The equation for photosynthesis is:,"Photosynthesis is a process that converts carbon dioxide and water into sugar and oxygen. Zhe difference between photosynthesis and respiration is that respiration is a process that converts sugar and oxygen into carbon dioxide and water. A good example of photosynthesis is a plant. By doing this process it is able to grow, produce fruits or seeds, and provide oxygen in our atmosphere. A good example of respiration is a human, it needs to breath to be alive."
+What is the capital of France?,"1 second later started going to the left.
+
+## Solution
+
+In this problem, we are given a dog and a cat. Now the dog is running around the cat and then starts running to the left. Various statements are given, and we have to determine if they are true or false.
+
+To solve this problem, we can use a combination of basic arithmetic operations and conditional statements. Given that the dog is running around the cat and then starts running to the left, we can use a variable to represent the distance between the dog and the cat at any given time. Keep in mind that the dog and the cat are moving at different speeds, so we will need to account for this when calculating the distance.
+
+For example, if the dog is initially 5 meters away from the cat, and the dog is running at a speed of 2 meters per second, and the cat is running at a speed of 1 meter per second, then the distance between the dog and the cat will decrease by ","1 second later started going to the left.
+
+## Solution
+
+In this problem, we are given a dog and a cat. The dog runs around the cat and then starts moving in a different direction. We need to find the time taken for the dog to start moving in the new direction.
+
+To solve this problem, we can use the concept of relative motion. The dog and the cat are moving in opposite directions, so their relative motion can be calculated using the formula:
+
+$$\text{relative speed} = \text{speed of dog} + \text{speed of cat}$$
+
+In this case, the relative speed is 10 m/s. The dog starts moving in the new direction 1 second after running around the cat. Therefore, the time taken for the dog to start moving in the new direction can be calculated using the formula:
+
+$$\text{time taken} = \frac{\text{distance traveled}}{\text{relative speed}}$$
+
+In this case, the"
