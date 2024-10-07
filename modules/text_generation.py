@@ -22,124 +22,250 @@ import spacy
 nlp = spacy.load("en_core_web_sm")
 start = 0
 
-def secure_hash_to_numbers(input_string, range_list):
+
+# def secure_hash_to_numbers(input_string, range_list):
 
     
-    nlp = spacy.load("en_core_web_sm")
 
-    doc = nlp(input_string)
+#     doc = nlp(input_string)
 
-    core = [token.lemma_ for token in doc if not token.is_stop]
+#     core = [token.lemma_ for token in doc if not token.is_stop]
 
-    core_str = " ".join(core)
+#     core_str = " ".join(core)
     
-    hashed_bytes = hashlib.sha256(core_str.encode()).digest()
+#     hashed_bytes = hashlib.sha256(core_str.encode()).digest()
 
-    num_numbers = len(range_list)
-    hashed_integers = [int.from_bytes(hashed_bytes[i:i+4], byteorder='big') for i in range(0, num_numbers * 4, 4)]
+#     num_numbers = len(range_list)
+#     hashed_integers = [int.from_bytes(hashed_bytes[i:i+4], byteorder='big') for i in range(0, num_numbers * 4, 4)]
 
-    #cast hash to integer, then use modulo to map to required range
-    result_numbers = []
-    for i in range(num_numbers):
-        range_min, range_max = range_list[i]
-        integer = hashed_integers[i]
-        mapped_number = (integer % (range_max - range_min + 1)) + range_min
-        result_numbers.append(mapped_number)
-    
+#     #cast hash to integer, then use modulo to map to required range
+#     result_numbers = []
+#     for i in range(num_numbers):
+#         range_min, range_max = range_list[i]
+#         integer = hashed_integers[i]
+#         mapped_number = (integer % (range_max - range_min + 1)) + range_min
+#         result_numbers.append(mapped_number)
     
     
     
-    '''
-    import subprocess
-    def run_classifier(param):
-        # Replace 'your_conda_env' with the name of your Conda environment
-        run_classifier_script = f"mamba run -n classifier python classifier.py '{param}'"
-        command = f"/bin/bash -c '{run_classifier_script}'"
+    
+#     '''
+#     import subprocess
+#     def run_classifier(param):
+#         # Replace 'your_conda_env' with the name of your Conda environment
+#         run_classifier_script = f"mamba run -n classifier python classifier.py '{param}'"
+#         command = f"/bin/bash -c '{run_classifier_script}'"
 
-        # Run the command and capture output
-        completed_process = subprocess.run(command, shell=True, text=True, capture_output=True)
-        return completed_process.stdout.strip()
+#         # Run the command and capture output
+#         completed_process = subprocess.run(command, shell=True, text=True, capture_output=True)
+#         return completed_process.stdout.strip()
 
-    # Rest of your LLM code
-    # ...
-    # Call the function where needed and pass the parameter
-    classifier_output = run_classifier("This is a test.")
-    print("Output from classifier:", classifier_output)
-    '''
+#     # Rest of your LLM code
+#     # ...
+#     # Call the function where needed and pass the parameter
+#     classifier_output = run_classifier("This is a test.")
+#     print("Output from classifier:", classifier_output)
+#     '''
     
     
-    '''
-    from transformers import pipeline
+#     '''
+#     from transformers import pipeline
 
-    classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli",device=-1)
+#     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli",device=-1)
     
-    labels = [
-        "Statement",      # Declarative statements or assertions
-        "Question",       # Any form of inquiry or query
-        "Request",        # Sentences that ask for something
-        "Command",        # Imperative or directive statements
-        "Offer",          # Proposals or suggestions
-        "Explanation",    # Providing clarifications or reasons
-        "Description",    # Descriptive details about something
-        "Opinion",        # Personal views or judgments
-        "Fact",           # Factual or objective information
-        "Assumption",     # Sentences based on assumptions
-        "Belief",         # Expressions of belief or conviction
-        "Doubt",          # Expressions of uncertainty or skepticism
-        "Hope",           # Sentences expressing hope or aspiration
-        "Wish",           # Expressions of desires or wishes
-        "Fear",           # Statements expressing fear or concern
-        "Joy",            # Expressions of happiness or joy
-        "Sadness",        # Expressions of sorrow or sadness
-        "Anger",          # Statements expressing anger or frustration
-        "Surprise",       # Expressions of surprise or astonishment
-        "Sarcasm",        # Sarcastic or ironic statements
-        "Joke",           # Humorous or joking statements
-        "Quote",          # Quotations or cited speech
-        "Agreement",      # Expressions of agreement or affirmation
-        "Disagreement",   # Expressions of disagreement or dissent
-        "Gratitude",      # Expressions of thanks or appreciation
-        "Apology"         # Statements of apology or regret
-    ]
+#     labels = [
+#         "Statement",      # Declarative statements or assertions
+#         "Question",       # Any form of inquiry or query
+#         "Request",        # Sentences that ask for something
+#         "Command",        # Imperative or directive statements
+#         "Offer",          # Proposals or suggestions
+#         "Explanation",    # Providing clarifications or reasons
+#         "Description",    # Descriptive details about something
+#         "Opinion",        # Personal views or judgments
+#         "Fact",           # Factual or objective information
+#         "Assumption",     # Sentences based on assumptions
+#         "Belief",         # Expressions of belief or conviction
+#         "Doubt",          # Expressions of uncertainty or skepticism
+#         "Hope",           # Sentences expressing hope or aspiration
+#         "Wish",           # Expressions of desires or wishes
+#         "Fear",           # Statements expressing fear or concern
+#         "Joy",            # Expressions of happiness or joy
+#         "Sadness",        # Expressions of sorrow or sadness
+#         "Anger",          # Statements expressing anger or frustration
+#         "Surprise",       # Expressions of surprise or astonishment
+#         "Sarcasm",        # Sarcastic or ironic statements
+#         "Joke",           # Humorous or joking statements
+#         "Quote",          # Quotations or cited speech
+#         "Agreement",      # Expressions of agreement or affirmation
+#         "Disagreement",   # Expressions of disagreement or dissent
+#         "Gratitude",      # Expressions of thanks or appreciation
+#         "Apology"         # Statements of apology or regret
+#     ]
 
-    labels2 = [
-        "Health",
-        "Technology",
-        "Politics",
-        "Economy",
-        "Education",
-        "Environment",
-        "Sports",
-        "Travel",
-        "Food",
-        "Music",
-        "Business"
-    ]
+#     labels2 = [
+#         "Health",
+#         "Technology",
+#         "Politics",
+#         "Economy",
+#         "Education",
+#         "Environment",
+#         "Sports",
+#         "Travel",
+#         "Food",
+#         "Music",
+#         "Business"
+#     ]
         
 
-    results = classifier(input_string, labels)
-    predicted_label = results['labels'][0]
-    label_index = labels.index(predicted_label)
+#     results = classifier(input_string, labels)
+#     predicted_label = results['labels'][0]
+#     label_index = labels.index(predicted_label)
 
-    results2 = classifier(input_string, labels2)
-    predicted_label2 = results2['labels'][0]
-    label_index2 = labels2.index(predicted_label2)
+#     results2 = classifier(input_string, labels2)
+#     predicted_label2 = results2['labels'][0]
+#     label_index2 = labels2.index(predicted_label2)
    
-    #print(input_string)
-    #print([label_index2, label_index])
-    #print("--------------------------")
-    #return [label_index2, label_index]
-    '''
+#     #print(input_string)
+#     #print([label_index2, label_index])
+#     #print("--------------------------")
+#     #return [label_index2, label_index]
+#     '''
+    
+#     return result_numbers
+
+# def get_last_sentence(text):
+#     doc = nlp(text)
+#     sentences = [sent.text for sent in doc.sents]
+#     if sentences:
+#         return sentences[-1]
+#     else:
+#         return None  # Return None if there are no sentences
+
+def split_into_sentences(text):
+    """
+    Splits the input text into sentences using SpaCy's sentence segmentation.
+    
+    Parameters:
+    - text (str): The text to split.
+    
+    Returns:
+    - List[str]: A list of sentences.
+    """
+    doc = nlp(text)
+    sentences = [sent.text.strip() for sent in doc.sents]
+    return sentences
+
+def get_words_in_sentence(sentence):
+    """
+    Extracts words from a sentence, excluding punctuation and spaces.
+    
+    Parameters:
+    - sentence (str): The sentence to process.
+    
+    Returns:
+    - List[str]: A list of words.
+    """
+    doc = nlp(sentence)
+    words = [token.text for token in doc if not token.is_punct and not token.is_space]
+    return words
+
+def secure_hash_for_word(word, range_min, range_max):
+    """
+    Generates a secure hash for a word and maps it to a number within a specified range.
+    
+    Parameters:
+    - word (str): The word to hash.
+    - range_min (int): The minimum value of the range.
+    - range_max (int): The maximum value of the range.
+    
+    Returns:
+    - int: The mapped number within [range_min, range_max].
+    """
+    hashed_word_bytes = hashlib.sha256(word.encode()).digest()
+    hashed_word_int = int.from_bytes(hashed_word_bytes[:4], byteorder='big')
+    mapped_number = (hashed_word_int % (range_max - range_min + 1)) + range_min
+    return mapped_number
+
+def secure_hash_for_sentence(sentence, range_min, range_max):
+    """
+    Generates a secure hash for a sentence (lemmatized, excluding stopwords and punctuation)
+    and maps it to a number within a specified range.
+    
+    Parameters:
+    - sentence (str): The sentence to hash.
+    - range_min (int): The minimum value of the range.
+    - range_max (int): The maximum value of the range.
+    
+    Returns:
+    - int: The mapped number within [range_min, range_max].
+    """
+    doc = nlp(sentence)
+    core_sentence = [token.lemma_ for token in doc if not token.is_stop and not token.is_punct]
+    core_sentence_str = " ".join(core_sentence)
+    
+    hashed_sentence_bytes = hashlib.sha256(core_sentence_str.encode()).digest()
+    hashed_sentence_int = int.from_bytes(hashed_sentence_bytes[:4], byteorder='big')
+    mapped_number = (hashed_sentence_int % (range_max - range_min + 1)) + range_min
+    return mapped_number
+
+def secure_hash_to_numbers(last_sentence=None, last_word=None, range_list=[(0, 10), (0, 25)]):
+    """
+    Generates a list of numbers based on the last sentence and/or last word.
+    - The first number is based on the sensorimotor class (word-based hashing).
+    - The second number is based on the acrostic letter (sentence-based hashing).
+    
+    Parameters:
+    - last_sentence (str or None): The last sentence if updating acrostic.
+    - last_word (str or None): The last word if updating sensorimotor.
+    - range_list (List[Tuple[int, int]]): List of ranges for sensorimotor and acrostic.
+    
+    Returns:
+    - List[int]: A list containing [sensorimotor_class, acrostic_letter].
+    """
+    result_numbers = []
+    
+    # Sensorimotor class based on last word
+    if last_word is not None:
+        sensorimotor_hash = secure_hash_for_word(last_word, range_list[0][0], range_list[0][1])
+    else:
+        sensorimotor_hash = shared.secret_key[0]  # Reuse previous sensorimotor class if not updating
+    result_numbers.append(sensorimotor_hash)
+    
+    # Acrostic letter based on last sentence
+    if last_sentence is not None:
+        acrostic_hash = secure_hash_for_sentence(last_sentence, range_list[1][0], range_list[1][1])
+    else:
+        acrostic_hash = shared.secret_key[1]  # Reuse previous acrostic letter if not updating
+    result_numbers.append(acrostic_hash)
     
     return result_numbers
+ 
 
-def get_last_sentence(text):
-    doc = nlp(text)
-    sentences = [sent.text for sent in doc.sents]
-    if sentences:
-        return sentences[-1]
-    else:
-        return None  # Return None if there are no sentences
+def get_last_word(reply):
+    """
+    Retrieves the last word from the current reply.
+    
+    Parameters:
+    - reply (str): The cumulative reply text.
+    
+    Returns:
+    - str or None: The last word if available, else None.
+    """
+    words = get_words_in_sentence(reply)
+    return words[-1] if words else None
+
+def get_last_sentence(reply):
+    """
+    Retrieves the last sentence from the current reply.
+    
+    Parameters:
+    - reply (str): The cumulative reply text.
+    
+    Returns:
+    - str or None: The last sentence if available, else None.
+    """
+    sentences = split_into_sentences(reply)
+    return sentences[-1] if sentences else None
     
 def apply_stopping_strings(reply, all_stop_strings):
     stop_found = False
@@ -332,16 +458,19 @@ def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
         else:
             i = 0
             for word in shared.vocab:
-                if shared.vocab_decode[i].upper() in shared.sensorimotor:
-                    
-                    if (shared.sensorimotor[shared.vocab_decode[i].upper()][shared.classes[shared.secret_key[0]]] > 2.0):
+                if shared.vocab_decode[i].strip().upper() in shared.sensorimotor:
+
+                    #this is old behaviour with mean values
+                    #if (shared.sensorimotor[shared.vocab_decode[i].upper()][shared.classes[shared.secret_key[0]]] > 2.0):
+                    if (shared.sensorimotor[shared.vocab_decode[i].strip().upper()]["Dominant.sensorimotor"] == shared.classes[shared.secret_key[0]]):
                         vocab_permutation[greenlist_size] = word
 
                         vocab_permutation2[i] = shared.delta_senso
                         greenlist_size += 1
 
-                    
+                                    
                 i += 1
+            print(f'''greenlist size {greenlist_size}''')
             
         greenlist_ids = vocab_permutation[:greenlist_size] # new
 
@@ -488,16 +617,31 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
                     #reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
                     new_content = get_reply_from_output_ids(output, state, starting_from=starting_from)
                         
-                    #detect if sentece ended to start new hash and acrostic for next word
-                    if((decode(output[-1],state['skip_special_tokens']) == ("." or "!"or "?"))):
+
+                    # Detect if a sentence has ended
+                    decoded_token = decode(output[-1], skip_special_tokens=True)
+                    
+                    if decoded_token in {".", "!", "?"}:
                         shared.new_sentence = True
                         last_sentence = get_last_sentence(reply)
                         print("------------------found end of sentence, last sentence is:")
                         print(last_sentence)
-                        shared.secret_key = secure_hash_to_numbers(last_sentence,[(0, 10), (0, 25)])
-                        print(shared.secret_key)
-                        #break change this if you want to do semantic labels again
 
+
+                        # Update the secret key based on the last sentence
+                        if last_sentence:
+                            shared.secret_key = secure_hash_to_numbers(last_sentence=last_sentence, last_word=None, range_list=[(0, 10), (0, 25)])
+                            print(f"Updated secret_key based on sentence: {shared.secret_key}")
+            
+
+                    # Update the secret key based on the last word
+                    last_word = get_last_word(reply)
+                    if last_word:
+                        shared.secret_key = secure_hash_to_numbers(last_sentence=None, last_word=last_word, range_list=[(0, 10), (0, 25)])
+                        print(last_word)
+                        print(f"Updated secret_key based on word: {shared.secret_key}")
+                    
+                    # Handle special Unicode character (if any)
                     if chr(0xfffd) in new_content:
                         continue
 
