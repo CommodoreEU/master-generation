@@ -10,8 +10,7 @@ import torch
 import transformers
 
 import modules.shared as shared
-from modules.callbacks import (Iteratorize, Stream,_StopEverythingStoppingCriteria)
-
+from modules.callbacks import (Iteratorize, Stream, _StopEverythingStoppingCriteria)
 
 import matplotlib.pyplot as plt
 import hashlib
@@ -19,135 +18,16 @@ import hashlib
 import spacy
 
 # Load the English language model
-nlp = spacy.load("en_core_web_sm")
-start = 0
+nlp = shared.nlp
 
-
-# def secure_hash_to_numbers(input_string, range_list):
-
-    
-
-#     doc = nlp(input_string)
-
-#     core = [token.lemma_ for token in doc if not token.is_stop]
-
-#     core_str = " ".join(core)
-    
-#     hashed_bytes = hashlib.sha256(core_str.encode()).digest()
-
-#     num_numbers = len(range_list)
-#     hashed_integers = [int.from_bytes(hashed_bytes[i:i+4], byteorder='big') for i in range(0, num_numbers * 4, 4)]
-
-#     #cast hash to integer, then use modulo to map to required range
-#     result_numbers = []
-#     for i in range(num_numbers):
-#         range_min, range_max = range_list[i]
-#         integer = hashed_integers[i]
-#         mapped_number = (integer % (range_max - range_min + 1)) + range_min
-#         result_numbers.append(mapped_number)
-    
-    
-    
-    
-#     '''
-#     import subprocess
-#     def run_classifier(param):
-#         # Replace 'your_conda_env' with the name of your Conda environment
-#         run_classifier_script = f"mamba run -n classifier python classifier.py '{param}'"
-#         command = f"/bin/bash -c '{run_classifier_script}'"
-
-#         # Run the command and capture output
-#         completed_process = subprocess.run(command, shell=True, text=True, capture_output=True)
-#         return completed_process.stdout.strip()
-
-#     # Rest of your LLM code
-#     # ...
-#     # Call the function where needed and pass the parameter
-#     classifier_output = run_classifier("This is a test.")
-#     print("Output from classifier:", classifier_output)
-#     '''
-    
-    
-#     '''
-#     from transformers import pipeline
-
-#     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli",device=-1)
-    
-#     labels = [
-#         "Statement",      # Declarative statements or assertions
-#         "Question",       # Any form of inquiry or query
-#         "Request",        # Sentences that ask for something
-#         "Command",        # Imperative or directive statements
-#         "Offer",          # Proposals or suggestions
-#         "Explanation",    # Providing clarifications or reasons
-#         "Description",    # Descriptive details about something
-#         "Opinion",        # Personal views or judgments
-#         "Fact",           # Factual or objective information
-#         "Assumption",     # Sentences based on assumptions
-#         "Belief",         # Expressions of belief or conviction
-#         "Doubt",          # Expressions of uncertainty or skepticism
-#         "Hope",           # Sentences expressing hope or aspiration
-#         "Wish",           # Expressions of desires or wishes
-#         "Fear",           # Statements expressing fear or concern
-#         "Joy",            # Expressions of happiness or joy
-#         "Sadness",        # Expressions of sorrow or sadness
-#         "Anger",          # Statements expressing anger or frustration
-#         "Surprise",       # Expressions of surprise or astonishment
-#         "Sarcasm",        # Sarcastic or ironic statements
-#         "Joke",           # Humorous or joking statements
-#         "Quote",          # Quotations or cited speech
-#         "Agreement",      # Expressions of agreement or affirmation
-#         "Disagreement",   # Expressions of disagreement or dissent
-#         "Gratitude",      # Expressions of thanks or appreciation
-#         "Apology"         # Statements of apology or regret
-#     ]
-
-#     labels2 = [
-#         "Health",
-#         "Technology",
-#         "Politics",
-#         "Economy",
-#         "Education",
-#         "Environment",
-#         "Sports",
-#         "Travel",
-#         "Food",
-#         "Music",
-#         "Business"
-#     ]
-        
-
-#     results = classifier(input_string, labels)
-#     predicted_label = results['labels'][0]
-#     label_index = labels.index(predicted_label)
-
-#     results2 = classifier(input_string, labels2)
-#     predicted_label2 = results2['labels'][0]
-#     label_index2 = labels2.index(predicted_label2)
-   
-#     #print(input_string)
-#     #print([label_index2, label_index])
-#     #print("--------------------------")
-#     #return [label_index2, label_index]
-#     '''
-    
-#     return result_numbers
-
-# def get_last_sentence(text):
-#     doc = nlp(text)
-#     sentences = [sent.text for sent in doc.sents]
-#     if sentences:
-#         return sentences[-1]
-#     else:
-#         return None  # Return None if there are no sentences
 
 def split_into_sentences(text):
     """
     Splits the input text into sentences using SpaCy's sentence segmentation.
-    
+
     Parameters:
     - text (str): The text to split.
-    
+
     Returns:
     - List[str]: A list of sentences.
     """
@@ -155,13 +35,14 @@ def split_into_sentences(text):
     sentences = [sent.text.strip() for sent in doc.sents]
     return sentences
 
+
 def get_words_in_sentence(sentence):
     """
     Extracts words from a sentence, excluding punctuation and spaces.
-    
+
     Parameters:
     - sentence (str): The sentence to process.
-    
+
     Returns:
     - List[str]: A list of words.
     """
@@ -169,15 +50,16 @@ def get_words_in_sentence(sentence):
     words = [token.text for token in doc if not token.is_punct and not token.is_space]
     return words
 
+
 def secure_hash_for_word(word, range_min, range_max):
     """
     Generates a secure hash for a word and maps it to a number within a specified range.
-    
+
     Parameters:
     - word (str): The word to hash.
     - range_min (int): The minimum value of the range.
     - range_max (int): The maximum value of the range.
-    
+
     Returns:
     - int: The mapped number within [range_min, range_max].
     """
@@ -186,87 +68,91 @@ def secure_hash_for_word(word, range_min, range_max):
     mapped_number = (hashed_word_int % (range_max - range_min + 1)) + range_min
     return mapped_number
 
+
 def secure_hash_for_sentence(sentence, range_min, range_max):
     """
     Generates a secure hash for a sentence (lemmatized, excluding stopwords and punctuation)
     and maps it to a number within a specified range.
-    
+
     Parameters:
     - sentence (str): The sentence to hash.
     - range_min (int): The minimum value of the range.
     - range_max (int): The maximum value of the range.
-    
+
     Returns:
     - int: The mapped number within [range_min, range_max].
     """
     doc = nlp(sentence)
     core_sentence = [token.lemma_ for token in doc if not token.is_stop and not token.is_punct]
     core_sentence_str = " ".join(core_sentence)
-    
+
     hashed_sentence_bytes = hashlib.sha256(core_sentence_str.encode()).digest()
     hashed_sentence_int = int.from_bytes(hashed_sentence_bytes[:4], byteorder='big')
     mapped_number = (hashed_sentence_int % (range_max - range_min + 1)) + range_min
     return mapped_number
+
 
 def secure_hash_to_numbers(last_sentence=None, last_word=None, range_list=[(0, 10), (0, 25)]):
     """
     Generates a list of numbers based on the last sentence and/or last word.
     - The first number is based on the sensorimotor class (word-based hashing).
     - The second number is based on the acrostic letter (sentence-based hashing).
-    
+
     Parameters:
     - last_sentence (str or None): The last sentence if updating acrostic.
     - last_word (str or None): The last word if updating sensorimotor.
     - range_list (List[Tuple[int, int]]): List of ranges for sensorimotor and acrostic.
-    
+
     Returns:
     - List[int]: A list containing [sensorimotor_class, acrostic_letter].
     """
     result_numbers = []
-    
+
     # Sensorimotor class based on last word
     if last_word is not None:
         sensorimotor_hash = secure_hash_for_word(last_word, range_list[0][0], range_list[0][1])
     else:
         sensorimotor_hash = shared.secret_key[0]  # Reuse previous sensorimotor class if not updating
     result_numbers.append(sensorimotor_hash)
-    
+
     # Acrostic letter based on last sentence
     if last_sentence is not None:
         acrostic_hash = secure_hash_for_sentence(last_sentence, range_list[1][0], range_list[1][1])
     else:
         acrostic_hash = shared.secret_key[1]  # Reuse previous acrostic letter if not updating
     result_numbers.append(acrostic_hash)
-    
+
     return result_numbers
- 
+
 
 def get_last_word(reply):
     """
     Retrieves the last word from the current reply.
-    
+
     Parameters:
     - reply (str): The cumulative reply text.
-    
+
     Returns:
     - str or None: The last word if available, else None.
     """
     words = get_words_in_sentence(reply)
     return words[-1] if words else None
 
+
 def get_last_sentence(reply):
     """
     Retrieves the last sentence from the current reply.
-    
+
     Parameters:
     - reply (str): The cumulative reply text.
-    
+
     Returns:
     - str or None: The last sentence if available, else None.
     """
     sentences = split_into_sentences(reply)
     return sentences[-1] if sentences else None
-    
+
+
 def apply_stopping_strings(reply, all_stop_strings):
     stop_found = False
     for string in all_stop_strings:
@@ -291,24 +177,8 @@ def apply_stopping_strings(reply, all_stop_strings):
 
     return reply, stop_found
 
+
 def get_reply_from_output_ids(output_ids, state=None, starting_from=0):
-    # if shared.model_type == 'HF_seq2seq':
-    #     reply = decode(output_ids, state['skip_special_tokens'])
-    # else:
-    #     new_tokens = len(output_ids) - len(input_ids[0])
-
-        
-
-    #     reply = decode(output_ids[-new_tokens:], state['skip_special_tokens'])
-
-    #     print(reply)
-
-        # Prevent LlamaTokenizer from skipping a space
-        # if type(shared.tokenizer) is transformers.LlamaTokenizer and len(output_ids) > 0:
-        #     if shared.tokenizer.convert_ids_to_tokens(int(output_ids[-new_tokens])).startswith('▁'):
-        #         reply = ' ' + reply
-
-
     reply = decode(output_ids[starting_from:], state['skip_special_tokens'] if state else True)
 
     # Handle tokenizers that do not add the leading space for the first token
@@ -320,23 +190,23 @@ def get_reply_from_output_ids(output_ids, state=None, starting_from=0):
         if first_token.startswith('▁'):
             reply = ' ' + reply
 
-    #print(reply)
     return reply
+
 
 def get_max_prompt_length(state):
     max_length = state['truncation_length'] - state['max_new_tokens']
     return max_length
 
+
 def encode(prompt, add_special_tokens=True, add_bos_token=True, truncation_length=None):
-    
     input_ids = shared.tokenizer.encode(str(prompt), return_tensors='pt', add_special_tokens=True)
 
     if hasattr(shared.tokenizer, 'bos_token_id') and shared.tokenizer.bos_token_id is not None:
         if add_bos_token:
             if (len(input_ids[0]) > 0 and input_ids[0][0] != shared.tokenizer.bos_token_id) or len(input_ids[0]) == 0:
                 # Add a missing bos token (it may not have been added due to faulty model metadata)
-                bos_tensor = torch.tensor([[shared.tokenizer.bos_token_id]])
-                input_ids = torch.cat((bos_tensor, input_ids), 1)
+                bos_tensor = torch.tensor([[shared.tokenizer.bos_token_id]]).cuda()
+                input_ids = torch.cat((bos_tensor, input_ids.cuda()), 1)
 
             # Prevent double bos token due to jinja templates with <s> somewhere
             while len(input_ids[0]) > 1 and input_ids[0][0] == shared.tokenizer.bos_token_id and input_ids[0][1] == shared.tokenizer.bos_token_id:
@@ -346,19 +216,6 @@ def encode(prompt, add_special_tokens=True, add_bos_token=True, truncation_lengt
             while len(input_ids[0]) > 0 and input_ids[0][0] == shared.tokenizer.bos_token_id:
                 input_ids = input_ids[:, 1:]
 
-    # This is a hack for making replies more creative.
-    #if not add_bos_token and input_ids[0][0] == shared.tokenizer.bos_token_id:
-    #    input_ids = input_ids[:, 1:]
-    
-
-
-    # Llama adds this extra token when the first character is '\n', and this
-    # compromises the stopping criteria, so we just remove it
-    #if type(shared.tokenizer) is transformers.LlamaTokenizer and input_ids[0][0] == 29871:
-    #    input_ids = input_ids[:, 1:]
-
-    #///////////////////////////////////////////////////////////////////////// i commented this out for testng llama 3, dont forget
-
     # Handling truncation
     if truncation_length is not None:
         input_ids = input_ids[:, -truncation_length:]
@@ -367,14 +224,13 @@ def encode(prompt, add_special_tokens=True, add_bos_token=True, truncation_lengt
 
 
 def decode(output_ids, skip_special_tokens=False):
-    return shared.tokenizer.decode(output_ids, skip_special_tokens=skip_special_tokens,clean_up_tokenization_spaces=False)
-
-
+    return shared.tokenizer.decode(output_ids, skip_special_tokens=skip_special_tokens, clean_up_tokenization_spaces=False)
 
 
 def clear_torch_cache():
     gc.collect()
     torch.cuda.empty_cache()
+
 
 def set_manual_seed(seed):
     seed = int(seed)
@@ -387,144 +243,111 @@ def set_manual_seed(seed):
 
 
 def calc_greenlist_mask(scores: torch.FloatTensor, greenlist_token_ids) -> torch.BoolTensor:
-        # TODO lets see if we can lose this loop
-        green_tokens_mask = torch.zeros_like(scores)
-        for b_idx in range(len(greenlist_token_ids)):
-            green_tokens_mask[b_idx][greenlist_token_ids[b_idx]] = 1
-        final_mask = green_tokens_mask.bool()
-        return final_mask
+    # TODO lets see if we can lose this loop
+    green_tokens_mask = torch.zeros_like(scores)
+    for b_idx in range(len(greenlist_token_ids)):
+        green_tokens_mask[b_idx][greenlist_token_ids[b_idx]] = 1
+    final_mask = green_tokens_mask.bool()
+    return final_mask
+
 
 def bias_greenlist_logits(scores: torch.Tensor, greenlist_mask: torch.Tensor, greenlist_bias: float) -> torch.Tensor:
-        scores[greenlist_mask] = scores[greenlist_mask] + greenlist_bias
-
-        #scores[greenlist_mask] = scores[greenlist_mask] + greenlist_bias[greenlist_mask]
-        return scores
+    scores[greenlist_mask] = scores[greenlist_mask] + greenlist_bias
+    return scores
 
 
-def get_greenlist_ids(input_ids: torch.LongTensor) -> list[float]:
+def get_greenlist_ids(input_ids: torch.LongTensor) -> torch.Tensor:
+    vocab_size = len(shared.vocab)
+    vocab_permutation2 = torch.zeros(vocab_size, device='cuda:0')
 
+    if shared.new_sentence:
+        shared.new_sentence = False
 
-        vocab_permutation = list(range(len(shared.vocab)))
-        greenlist_size = 0
+        # ASCII values 65 to 90 represent uppercase letters (A to Z)
+        alphabetic_characters = [chr(i) for i in range(65, 91)]
 
-        vocab_permutation2 = [0] * len(shared.vocab) #[(n, 0) for n in range(len(shared.vocab))]
-        #vocab_dict = {value: 0 for value in shared.vocab} 
+        target_char = alphabetic_characters[shared.secret_key[1]]
 
-        # Check if input contains special characters
-        # special_tokens = [
-        #     shared.tokenizer.pad_token_id,  # Padding token
-        #     shared.tokenizer.eos_token_id,  # End-of-sequence token
-        #     shared.tokenizer.bos_token_id   # Start-of-sequence token
-        # ]
-        # Decode input tokens to check if special characters are present
-        #TODO: is this really required? this is supposed to not change any logits if current token is special on
-        #for token_id in input_ids:
-        #    decoded_token = shared.tokenizer.decode([token_id], skip_special_tokens=False,clean_up_tokenization_spaces=False)
-        #    # If it's a special token, skip the function and return an empty list
-        #    if token_id in special_tokens or decoded_token in ['▁', 'Ġ']:  # Add more as needed
-        #        return [0] * len(shared.vocab)  # Return empty or default vocab_permutation2
+        # Create a list of booleans indicating which vocab items start with the target character
+        matches = [1 if token.startswith(f' {target_char}') else 0 for token in shared.vocab_decode]
 
+        # Create tensor from matches
+        matches_tensor = torch.tensor(matches, device='cuda:0', dtype=torch.float32)
 
-        if(shared.new_sentence == True):
-            
-            #to avoid influence first sentence
-            shared.delta_senso = shared.delta_char
+        # Multiply matches_tensor by shared.delta_acro
+        vocab_permutation2 += matches_tensor * shared.delta_acro
+    else:
+        # Process sensorimotor tokens
+        token_stripped_upper = [token.strip().upper() for token in shared.vocab_decode]
 
-            if(shared.start == 1):
-                shared.new_sentence = False
-            shared.new_sentence = False
-            shared.start += 1
+        matches = []
+        for token in token_stripped_upper:
+            if token in shared.sensorimotor:
+                if shared.sensorimotor[token]["Dominant.sensorimotor"] == shared.classes[shared.secret_key[0]]:
+                    matches.append(1)
+                else:
+                    matches.append(0)
+            else:
+                matches.append(0)
 
-            #ASCII values 65 to 90 represent uppercase letters (A to Z), and values 97 to 122 represent lowercase letters (a to z)
-            alphabetic_characters = [chr(i) for i in range(65, 91)] #+ [chr(i) for i in range(97, 123)]
+        matches_tensor = torch.tensor(matches, device='cuda:0', dtype=torch.float32)
+        vocab_permutation2 += matches_tensor * shared.delta_senso
 
-            print(f'''//////////// {alphabetic_characters[shared.secret_key[1]]}''')
-            i = 0
-            for word in shared.vocab:
-                # decoded_token = shared.vocab_decode[i]
-                # if decoded_token.startswith('▁') or decoded_token.startswith('Ġ'):
-                #     decoded_token = decoded_token[1:]
+    # Watermarking feature added here
+    # Apply watermarking delta_redgreen
+    last_token = input_ids[-1].item()
 
-                
-                # if shared.vocab_decode[i].startswith(alphabetic_characters[shared.secret_key[1]]):
-                #the new sentence should have a whitespace as first token....
-                if shared.vocab_decode[i].startswith(f' {alphabetic_characters[shared.secret_key[1]]}'):                    
-                    vocab_permutation[greenlist_size] = word
-                    vocab_permutation2[i] = shared.delta_first
-                    greenlist_size += 1
-                i += 1
-                
-            print(f'''acro size {greenlist_size}''')
-        else:
-            i = 0
-            for word in shared.vocab:
-                if shared.vocab_decode[i].strip().upper() in shared.sensorimotor:
+    # Define the hash function
+    def default_hash_fn(token_id):
+        return int(hashlib.sha256(str(token_id).encode('utf-8')).hexdigest(), 16) % (10 ** 8)
 
-                    #this is old behaviour with mean values
-                    #if (shared.sensorimotor[shared.vocab_decode[i].upper()][shared.classes[shared.secret_key[0]]] > 2.0):
-                    if (shared.sensorimotor[shared.vocab_decode[i].strip().upper()]["Dominant.sensorimotor"] == shared.classes[shared.secret_key[0]]):
-                        vocab_permutation[greenlist_size] = word
+    # Seed the random generator based on the last token
+    seed = default_hash_fn(last_token)
+    generator = torch.Generator(device='cuda:0').manual_seed(seed)
 
-                        vocab_permutation2[i] = shared.delta_senso
-                        greenlist_size += 1
+    # Generate a random permutation of the vocabulary
+    gli = torch.randperm(vocab_size, generator=generator, device='cuda:0')
 
-                                    
-                i += 1
-            print(f'''greenlist size {greenlist_size}''')
-            
-        greenlist_ids = vocab_permutation[:greenlist_size] # new
+    # Define the proportion of the green list (gamma)
+    gamma = 0.5  # Adjust gamma as needed
+    gls = int(gamma * vocab_size)  # Green list size
 
-        return vocab_permutation2
-        #return greenlist_ids 
-        
+    # Get the indices of the green list tokens
+    green_list_indices = gli[:gls]
+
+    # Adjust delta values for the green list tokens using delta_redgreen
+    vocab_permutation2[green_list_indices] += shared.delta_redgreen
+
+    return vocab_permutation2
+
 
 def boost_tokens_with_a(input_ids, scores, **kwargs):
-   
-    # batched_greenlist_ids = [None for _ in range(input_ids.shape[0])]
-
-    # for b_idx in range(input_ids.shape[0]):
-    #         #greenlist_ids = get_greenlist_ids(input_ids[b_idx])
-
-
-    #         greenlist_ids = get_greenlist_ids(input_ids[b_idx])
-    #         batched_greenlist_ids[b_idx] = greenlist_ids
-
-
-
-    # permutation_tensor = torch.as_tensor(batched_greenlist_ids)
-    # permutation_tensor = permutation_tensor.to("cuda:0")
-
-    # print(input_ids.shape)
-    # scores[:] = scores[:] + permutation_tensor[:] 
-    # return scores
-        # Initialize all batched_greenlist_ids with [0] * len(shared.vocab)
     vocab_size = len(shared.vocab)
-    batched_greenlist_ids = [[0] * vocab_size for _ in range(input_ids.shape[0])]
+    batch_size = input_ids.shape[0]
 
-    # Only calculate get_greenlist_ids for the latest b_idx (the last one)
-    latest_b_idx = input_ids.shape[0] - 1
+    # Initialize a tensor of zeros directly on GPU
+    permutation_tensor = torch.zeros((batch_size, vocab_size), device='cuda:0')
+
+    # Only calculate get_greenlist_ids for the latest batch index
+    latest_b_idx = batch_size - 1
     greenlist_ids = get_greenlist_ids(input_ids[latest_b_idx])
-    
-    # Set the last batch greenlist
-    batched_greenlist_ids[latest_b_idx] = greenlist_ids
 
-    # Convert batched_greenlist_ids to a tensor and move to GPU
-    permutation_tensor = torch.as_tensor(batched_greenlist_ids).to("cuda:0")
+    # Set the last batch greenlist
+    permutation_tensor[latest_b_idx] = greenlist_ids
 
     # Add the permutation tensor to the scores
     scores[:] = scores[:] + permutation_tensor[:]
 
     return scores
 
-#max_new_tokens, do_sample, temperature, top_p, typical_p, repetition_penalty, encoder_repetition_penalty, top_k, min_length, no_repeat_ngram_size, num_beams, penalty_alpha, length_penalty, early_stopping, seed, 
+
 def generate_reply(question, state, eos_token=None, stopping_strings=None):
     clear_torch_cache()
     done = False
     seed = set_manual_seed(state['seed'])
     generate_params = {}
-    
-    original_question = question
 
+    original_question = question
 
     for k in ['max_new_tokens', 'temperature', 'temperature_last', 'dynamic_temperature', 'dynatemp_low', 'dynatemp_high', 'dynatemp_exponent', 'smoothing_factor', 'smoothing_curve', 'top_p', 'min_p', 'top_k', 'repetition_penalty', 'presence_penalty', 'frequency_penalty', 'repetition_penalty_range', 'typical_p', 'tfs', 'top_a', 'guidance_scale', 'penalty_alpha', 'mirostat_mode', 'mirostat_tau', 'mirostat_eta', 'do_sample', 'encoder_repetition_penalty', 'no_repeat_ngram_size', 'dry_multiplier', 'dry_base', 'dry_allowed_length', 'dry_sequence_breakers']:
         if k in state:
@@ -535,51 +358,31 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
 
     # Encode the input
     input_ids = encode(question, add_bos_token=state['add_bos_token'], truncation_length=get_max_prompt_length(state))
-    
+
     original_input_ids = input_ids
-    #output = input_ids[0]
 
     # Find the eos tokens
-    #eos_token_ids = [shared.tokenizer.eos_token_id] if shared.tokenizer.eos_token_id is not None else []
-    #if eos_token is not None:
-    #    eos_token_ids.append(int(encode(eos_token)[0][-1]))
     eos_token_ids = [shared.tokenizer.eos_token_id] if shared.tokenizer.eos_token_id is not None else []
     generate_params['eos_token_id'] = eos_token_ids
 
     # Add the encoded tokens to generate_params
-    original_input_ids = input_ids
     generate_params.update({'inputs': input_ids})
 
-
-    # Create the StoppingCriteriaList with the stopping strings (needs to be done after tokenizer extensions)
-    # stopping_criteria_list = transformers.StoppingCriteriaList()
-
-    # for st in (stopping_strings, ast.literal_eval(f"[{state['custom_stopping_strings']}]")):
-    #     if type(st) is list and len(st) > 0:
-    #         sentinel_token_ids = [encode(string, add_special_tokens=False) for string in st]
-    #         stopping_criteria_list.append(_SentinelTokenStoppingCriteria(sentinel_token_ids=sentinel_token_ids, starting_idx=len(input_ids[0])))
-    #         break
+    # Create the StoppingCriteriaList with the stopping strings
     generate_params['stopping_criteria'] = transformers.StoppingCriteriaList()
     generate_params['stopping_criteria'].append(_StopEverythingStoppingCriteria())
-    
-    ##logits code
+
+    # Logits processor
     generate_params.update({"logits_processor": transformers.LogitsProcessorList([boost_tokens_with_a])})
 
-    #this does not work anymore since rust tokenizer implementations do not order their vocab by token id, fix is to instead create a range() of length of vocab
-    #shared.vocab=list(shared.tokenizer.get_vocab().values())
+    # Adjust shared vocab and decode
     shared.vocab = list(range(len(shared.tokenizer.get_vocab())))
-    
+
     shared.vocab_decode = []
     for word in shared.vocab:
-        decoded_token = shared.tokenizer.decode(word, skip_special_tokens=False,clean_up_tokenization_spaces=False)
-        #better do this inside the logits function
-        #  if decoded_token.startswith('▁') or decoded_token.startswith('Ġ'):
-        #             decoded_token = decoded_token[1:]
-                    
-        shared.vocab_decode.append(decoded_token)#,state['skip_special_tokens']))
+        decoded_token = shared.tokenizer.decode(word, skip_special_tokens=False, clean_up_tokenization_spaces=False)
+        shared.vocab_decode.append(decoded_token)
 
-  
-   
     reply = ""
     t0 = time.time()
     try:
@@ -590,12 +393,10 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
                 output = shared.model.generate(**generate_params)[0]
                 output = output.cuda()
 
-            #reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
             starting_from = 0 if shared.is_seq2seq else len(input_ids[0])
             reply = get_reply_from_output_ids(output, state, starting_from=starting_from)
 
         # Stream the reply 1 token at a time.
-        # This is based on the trick of using 'stopping_criteria' to create an iterator.
         else:
             def generate_with_callback(callback=None, *args, **kwargs):
                 kwargs['stopping_criteria'].append(Stream(callback_func=callback))
@@ -607,58 +408,41 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
                 return Iteratorize(generate_with_callback, [], kwargs, callback=None)
 
             with generate_with_streaming(**generate_params) as generator:
-                cumulative_reply = ''#is reply in our case
                 starting_from = 0 if shared.is_seq2seq else len(input_ids[0])
                 for output in generator:
-                    #print((decode(output[-1],state['skip_special_tokens'])))
                     if output[-1] in eos_token_ids:
                         done = True
                         break
-                    #reply = get_reply_from_output_ids(output, input_ids, original_question, state, is_chat=True)
                     new_content = get_reply_from_output_ids(output, state, starting_from=starting_from)
-                        
 
                     # Detect if a sentence has ended
                     decoded_token = decode(output[-1], skip_special_tokens=True)
-                    
+
                     if decoded_token in {".", "!", "?"}:
                         shared.new_sentence = True
                         last_sentence = get_last_sentence(reply)
-                        print("------------------found end of sentence, last sentence is:")
-                        print(last_sentence)
-
 
                         # Update the secret key based on the last sentence
                         if last_sentence:
                             shared.secret_key = secure_hash_to_numbers(last_sentence=last_sentence, last_word=None, range_list=[(0, 10), (0, 25)])
-                            print(f"Updated secret_key based on sentence: {shared.secret_key}")
-            
 
                     # Update the secret key based on the last word
                     last_word = get_last_word(reply)
                     if last_word:
                         shared.secret_key = secure_hash_to_numbers(last_sentence=None, last_word=last_word, range_list=[(0, 10), (0, 25)])
-                        print(last_word)
-                        print(f"Updated secret_key based on word: {shared.secret_key}")
-                    
+
                     # Handle special Unicode character (if any)
                     if chr(0xfffd) in new_content:
                         continue
 
                     reply += new_content
                     starting_from = len(output)
-                    
-                    
 
     except Exception:
         done = True
         traceback.print_exc()
 
-    finally:  
-        #new_tokens = len(output) - len(input_ids[0])
-        #reply = decode(output[-new_tokens:], state['skip_special_tokens'])
-        #print(reply)
-
+    finally:
         # Find the stopping strings
         all_stop_strings = []
         for st in (stopping_strings, state['custom_stopping_strings']):
@@ -674,7 +458,4 @@ def generate_reply(question, state, eos_token=None, stopping_strings=None):
         t1 = time.time()
         original_tokens = len(original_input_ids[0])
         new_tokens = len(output) - original_tokens
-        #print(f'Output generated in {(t1-t0):.2f} seconds ({new_tokens/(t1-t0):.2f} tokens/s, {new_tokens} tokens, context {original_tokens}, seed {seed})')
-        cleaned_string = reply.replace("\n", "").rstrip()
         return reply, done
-
